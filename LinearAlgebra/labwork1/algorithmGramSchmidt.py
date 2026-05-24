@@ -5,7 +5,6 @@ import math
 """
 
 
-
 def dot_product(v1, v2):
     """Скалярное произведение векторов"""
     if len(v1) != len(v2):
