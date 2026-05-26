@@ -1,83 +1,69 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sympy as sp
 
-x_sym = sp.Symbol('x')
-f_sym = x_sym
-l_val = np.pi
-N_terms = 10
+# Исходная функция на периоде [0, 2pi]
+def f_original(x):
+    x_mod = np.mod(x, 2 * np.pi)
+    return np.where((x_mod >= 0) & (x_mod < np.pi), np.sin(x_mod), 0.0)
 
-def get_fourier_series(f, l, N, mode='general'):
-    x = sp.Symbol('x')
-    a0, a_coeffs, b_coeffs = 0, [], []
+# Сумма общего тригонометрического ряда Фурье 
+def fourier_general(x, N):
+    res = np.full_like(x, 1.0 / np.pi)
+    res += 0.5 * np.sin(x)  
+    for n in range(2, N + 1):
+        if n % 2 == 0: 
+            k = n // 2
+            a_2k = -2.0 / (np.pi * (4 * k**2 - 1))
+            res += a_2k * np.cos(n * x)
+    return res
 
-    if mode == 'general':
-        a0 = (1 / l) * sp.integrate(f, (x, -l, l))
-        for n in range(1, N + 1):
-            an = (1 / l) * sp.integrate(f * sp.cos(n * sp.pi * x / l), (x, -l, l))
-            bn = (1 / l) * sp.integrate(f * sp.sin(n * sp.pi * x / l), (x, -l, l))
-            a_coeffs.append(an)
-            b_coeffs.append(bn)
-    elif mode == 'even':  # Только косинусы
-        a0 = (2 / l) * sp.integrate(f, (x, 0, l))
-        for n in range(1, N + 1):
-            an = (2 / l) * sp.integrate(f * sp.cos(n * sp.pi * x / l), (x, 0, l))
-            a_coeffs.append(an)
-            b_coeffs.append(0)
-    elif mode == 'odd':  # Только синусы
-        a0 = 0
-        for n in range(1, N + 1):
-            bn = (2 / l) * sp.integrate(f * sp.sin(n * sp.pi * x / l), (x, 0, l))
-            a_coeffs.append(0)
-            b_coeffs.append(bn)
+# Сумма ряда по косинусам
+def fourier_cos(x, N):
+    res = np.full_like(x, 1.0 / np.pi)
+    for n in range(1, N + 1):
+        if n % 2 == 0:  
+            k = n // 2
+            a_2k = -2.0 / (np.pi * (4 * k**2 - 1))
+            res += a_2k * np.cos(n * x)
+    return res
 
+# Сумма ряда по синусам 
+def fourier_sin(x):
+    return 0.5 * np.sin(x)
 
-    def fourier_sum(x_arr):
-        res = float(a0) / 2
-        for n in range(1, N + 1):
-            if mode != 'odd':
-                res += float(a_coeffs[n - 1]) * np.cos(n * np.pi * x_arr / l)
-            if mode != 'even':
-                res += float(b_coeffs[n - 1]) * np.sin(n * np.pi * x_arr / l)
-        return res
-
-    return fourier_sum
-
-
-
-x_plot = np.linspace(-3 * float(l_val), 3 * float(l_val), 1000)
-
-
-s_general = get_fourier_series(f_sym, l_val, N_terms, 'general')
-s_even = get_fourier_series(f_sym, l_val, N_terms, 'even')
-s_odd = get_fourier_series(f_sym, l_val, N_terms, 'odd')
-
+# Настройка сетки точек 
+x_plot = np.linspace(-2 * np.pi, 4 * np.pi, 1000)
+N_terms = 30 
 
 plt.figure(figsize=(12, 10))
 
-# График 1: Общий ряд
+#Общий тригонометрический ряд
 plt.subplot(3, 1, 1)
-plt.plot(x_plot, s_general(x_plot), label=f'Сумма общего ряда (N={N_terms})', color='blue')
-plt.axvline(x=0, color='gray', linestyle='--')
-plt.title('1. Общий тригонометрический ряд Фурье')
+plt.plot(x_plot, f_original(x_plot), label='Исходная $f(x)$', color='gray', linestyle='--', alpha=0.7)
+plt.plot(x_plot, fourier_general(x_plot, N_terms), label=f'Сумма общего ряда (N={N_terms})', color='blue', lw=2)
+plt.title('1. График суммы общего тригонометрического ряда Фурье')
 plt.grid(True)
 plt.legend()
+plt.axhline(0, color='black', linewidth=0.5)
 
-# График 2: Четное продолжение
+#Ряд по косинусам
 plt.subplot(3, 1, 2)
-plt.plot(x_plot, s_even(x_plot), label=f'Ряд по косинусам (N={N_terms})', color='green')
-plt.axvline(x=0, color='gray', linestyle='--')
-plt.title('2. Четное продолжение (Ряд по косинусам)')
+f_even_visual = f_original(np.abs(x_plot))  
+plt.plot(x_plot, f_even_visual, label='Четное продолжение $f(x)$', color='gray', linestyle='--', alpha=0.7)
+plt.plot(x_plot, fourier_cos(x_plot, N_terms), label=f'Сумма ряда по косинусам (N={N_terms})', color='green', lw=2)
+plt.title('2. График суммы ряда Фурье по косинусам (Четное продолжение)')
 plt.grid(True)
 plt.legend()
-
-# График 3: Нечетное продолжение
+plt.axhline(0, color='black', linewidth=0.5)
+#Ряд по синусам
 plt.subplot(3, 1, 3)
-plt.plot(x_plot, s_odd(x_plot), label=f'Ряд по синусам (N={N_terms})', color='red')
-plt.axvline(x=0, color='gray', linestyle='--')
-plt.title('3. Нечетное продолжение (Ряд по синусам)')
+f_odd_visual = np.sign(x_plot) * f_original(np.abs(x_plot))  
+plt.plot(x_plot, f_odd_visual, label='Нечетное продолжение $f(x)$', color='gray', linestyle='--', alpha=0.7)
+plt.plot(x_plot, fourier_sin(x_plot), label='Сумма ряда по синусам (только $b_1$)', color='red', lw=2)
+plt.title('3. График суммы ряда Фурье по синусам (Нечетное продолжение)')
 plt.grid(True)
 plt.legend()
+plt.axhline(0, color='black', linewidth=0.5)
 
 plt.tight_layout()
 plt.show()
